@@ -49,6 +49,7 @@ from luigi.event import Event
 
 from .tools import range  # just makes the tool classes available from command line
 
+__version__ = '2.7.1'
 
 __all__ = [
     'task', 'Task', 'Config', 'ExternalTask', 'WrapperTask', 'namespace', 'auto_namespace',
