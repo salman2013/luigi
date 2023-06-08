@@ -77,7 +77,10 @@ class S3Client(FileSystem):
 
     def __init__(self, aws_access_key_id=None, aws_secret_access_key=None,
                  **kwargs):
-        from boto.s3.key import Key
+        import boto3
+
+        s3_resource = boto3.resource('s3')
+        key = s3_resource.Object 
         options = self._get_s3_config()
         options.update(kwargs)
         if aws_access_key_id:
@@ -85,14 +88,13 @@ class S3Client(FileSystem):
         if aws_secret_access_key:
             options['aws_secret_access_key'] = aws_secret_access_key
 
-        self.Key = Key
+        self.Key = key
         self._options = options
 
     @property
     def s3(self):
         # only import boto when needed to allow top-lvl s3 module import
-        import boto
-        import boto.s3.connection
+        import boto3
 
         options = dict(self._options)
 
@@ -109,9 +111,7 @@ class S3Client(FileSystem):
         aws_session_token = None
 
         if role_arn and role_session_name:
-            from boto import sts
-
-            sts_client = sts.STSConnection()
+            sts_client = boto3.client('sts')    
             assumed_role = sts_client.assume_role(role_arn, role_session_name)
             aws_secret_access_key = assumed_role.credentials.secret_key
             aws_access_key_id = assumed_role.credentials.access_key
@@ -120,10 +120,13 @@ class S3Client(FileSystem):
         for key in ['aws_access_key_id', 'aws_secret_access_key', 'aws_role_session_name', 'aws_role_arn']:
             if key in options:
                 options.pop(key)
-        self._s3 = boto.s3.connection.S3Connection(aws_access_key_id,
-                                                   aws_secret_access_key,
-                                                   security_token=aws_session_token,
-                                                   **options)
+
+        self._s3 = boto3.client('s3',
+                        aws_access_key_id=aws_access_key_id,
+                        aws_secret_access_key=aws_secret_access_key,
+                        aws_session_token=aws_session_token,
+                        **options)
+
         return self._s3
 
     @s3.setter
