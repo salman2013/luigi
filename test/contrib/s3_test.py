@@ -23,8 +23,9 @@ import tempfile
 from target_test import FileSystemTargetTestMixin
 from helpers import with_config, unittest, skipOnTravis
 
-from boto.exception import S3ResponseError
-from boto.s3 import key
+import boto3
+from botocore.exceptions import ClientError
+
 from moto import mock_s3
 from moto import mock_sts
 
@@ -82,8 +83,10 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
     def test_read_iterator_long(self):
         # write a file that is 5X the boto buffersize
         # to test line buffering
-        old_buffer = key.Key.BufferSize
-        key.Key.BufferSize = 2
+
+        old_buffer = boto3.s3.transfer.TransferConfig().multipart_chunksize
+        boto3.s3.transfer.TransferConfig().multipart_chunksize = 2
+
         try:
             tempf = tempfile.NamedTemporaryFile(mode='wb', delete=False)
             temppath = tempf.name
@@ -99,7 +102,7 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
             with t.open() as read_file:
                 lines = [line for line in read_file]
         finally:
-            key.Key.BufferSize = old_buffer
+            boto3.s3.transfer.TransferConfig().multipart_chunksize = old_buffer
 
         self.assertEqual(3, len(lines))
         self.assertEqual(firstline, lines[0])
@@ -381,7 +384,7 @@ class TestS3Client(unittest.TestCase):
         s3_client.s3.create_bucket('mybucket')
 
         self.assertRaises(
-            S3ResponseError,
+            ClientError,
             lambda: s3_client.remove('s3://bucketdoesnotexist/file')
         )
 
